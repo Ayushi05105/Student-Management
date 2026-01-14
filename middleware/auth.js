@@ -1,55 +1,27 @@
-// const jwt = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 
-// const adminAuth = (req, res, next) => {
-//     // Check if req and res are defined
-//     if (!req || !res) {
-//         console.error("Request or Response object is undefined.");
-//         return;
-//     }
+const adminAuth = (req, res, next) => {
+    // Check if req and res are defined
+    if (!req || !res) {
+        console.error("Request or Response object is undefined.");
+        return;
+    }
 
-//     const token = req.cookies?.token;  // Safe navigation to avoid undefined error
+    const token = req.cookies?.token;  // Safe navigation to avoid undefined error
 
-//     if (!token) {
-//         console.log("No token found. Redirecting to login.");
-//         return res.redirect('/auth/login');  // Redirect to login if token is missing
-//     }
+    if (!token) {
+        console.log("No token found. Redirecting to login.");
+        return res.redirect('/auth/login');  // Redirect to login if token is missing
+    }
 
-//     try {
-//         const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Replace with your secret key
-//         req.admin = decoded;
-//         next();
-//     } catch (err) {
-//         console.error("Invalid token. Redirecting to login:", err);
-//         return res.redirect('/auth/login');  // Redirect if token is invalid
-//     }
-// };
-
-// module.exports = adminAuth;
-
-
-const jwt = require("jsonwebtoken");
-const Admin = require("../models/Admin");
-const Student = require("../models/Student");
-
-module.exports = async (req, res, next) => {
     try {
-        const token = req.cookies.token;
-        if (!token) return res.redirect("/auth/login");
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        if (decoded.role === "admin") {
-            req.user = await Admin.findById(decoded.id);
-        } else if (decoded.role === "student") {
-            req.user = await Student.findById(decoded.id);
-        }
-
-        if (!req.user) return res.redirect("/auth/login");
-
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);  // Replace with your secret key
+        req.admin = decoded;
         next();
     } catch (err) {
-        console.log(err);
-        res.redirect("/auth/login");
+        console.error("Invalid token. Redirecting to login:", err);
+        return res.redirect('/auth/login');  // Redirect if token is invalid
     }
 };
 
+module.exports = adminAuth;

@@ -1,93 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const Admin = require('../models/Admin');
-const Student = require('../models/Student');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const adminAuth = require('../middleware/auth');
 
-// =========================
-// STUDENT REGISTER PAGE
-// =========================
-router.get("/student-register", (req, res) => {
-    res.render("studentRegister");   // Make studentRegister.ejs
-});
-
-// =========================
-// STUDENT REGISTER SUBMIT
-// =========================
-router.post("/student-register", async (req, res) => {
-    const { name, rollno, password, age, contact, enrollmentYear } = req.body;
-
-    try {
-        const exists = await Student.findOne({ rollno });
-        if (exists) {
-            return res.send("Student already exists");
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const newStudent = new Student({
-            name,
-            rollno,
-            password: hashedPassword,
-            age,
-            contact,
-            enrollmentYear
-        });
-
-        await newStudent.save();
-
-        res.send("Student Registered Successfully! Now Login.");
-
-    } catch (err) {
-        console.log(err);
-        res.send("Server Error");
-    }
-});
-
-// =========================
-// STUDENT LOGIN
-// =========================
-router.post('/student-login', async (req, res) => {
-    const { rollno, password } = req.body;
-
-    try {
-        const student = await Student.findOne({ rollno });
-
-        if (!student) {
-            return res.send("Invalid student credentials");
-        }
-
-        const isMatch = await bcrypt.compare(password, student.password);
-        if (!isMatch) {
-            return res.send("Invalid student credentials");
-        }
-
-        const token = jwt.sign(
-            { id: student._id, role: "student" },
-            process.env.JWT_SECRET,
-            { expiresIn: "1h" }
-        );
-
-        res.cookie("token", token, { httpOnly: true });
-        res.redirect("/student/dashboard");
-
-    } catch (err) {
-        console.log(err);
-        res.send("Server error");
-    }
-});
-
-// =========================
-// ADMIN LOGIN PAGE
-// =========================
+// Render the login page
 router.get('/login', (req, res) => {
-    res.render('login');
+    res.render('login');  // Make sure you have a 'login.ejs' file in the views folder
 });
 
-// =========================
-// ADMIN LOGIN SUBMIT
-// =========================
+// Handle login form submission
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -102,9 +25,9 @@ router.post('/login', async (req, res) => {
             return res.render('login', { error: 'Invalid email or password' });
         }
 
+        // Generate JWT token
         const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.cookie('token', token, { httpOnly: true });
-
         res.redirect('/admin');
     } catch (err) {
         console.error(err);
@@ -112,46 +35,49 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// =========================
-// ADMIN SIGNUP PAGE
-// =========================
+
+// Render the signup page
 router.get('/admin/signup', (req, res) => {
     res.render('signup');  
 });
 
-// =========================
-// ADMIN SIGNUP SUBMIT
-// =========================
+// Handle signup form submission
 router.post('/admin/signup', async (req, res) => {
     const { name, email, password } = req.body;
 
     try {
+        // Check if admin already exists
         const existingAdmin = await Admin.findOne({ email });
         if (existingAdmin) {
             return res.render('signup', { error: 'Email already registered' });
         }
 
+        // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const newAdmin = new Admin({ name, email, password: hashedPassword });
+        // Create new admin
+        const newAdmin = new Admin({
+            name,
+            email,
+            password: hashedPassword,
+        });
         await newAdmin.save();
 
+        // Generate JWT token
         const token = jwt.sign({ id: newAdmin._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.cookie('token', token, { httpOnly: true });
-
-        res.redirect('/admin');
+        res.redirect('/admin');  // Redirect to admin dashboard after signup
     } catch (err) {
         console.error(err);
         res.render('signup', { error: 'An error occurred. Please try again.' });
     }
 });
 
-// =========================
-// LOGOUT
-// =========================
+// Logout Admin
 router.post('/logout', (req, res) => {
-    res.clearCookie('token');
-    res.redirect('/login');
+    res.clearCookie('token');  // Remove the JWT token cookie
+    res.redirect('login');  // Redirect to login page
 });
+
 
 module.exports = router;
